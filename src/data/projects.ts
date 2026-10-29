@@ -44,6 +44,8 @@ export interface Project {
   realImage?: string;
   wiringImage?: string;
   featured?: boolean;
+  status?: "published" | "draft"; // drafts are hidden from search (and anything else that checks); default published
+  keywords?: string[];            // optional extra search words: other names people use for this robot
   bom?: BomItem[];
   steps?: {
     stepNumber: number;
@@ -2764,45 +2766,586 @@ void stopMotors() {
     slug: "smart-agro-rover",
     title: "Smart Agro Rover",
     badge: "AGRI-ROBOT",
-    description: "A roving plant helper that checks soil moisture in pots and takes photos of crops using an onboard camera.",
-    howItWorks: "The rover drives near plants, dips a moisture probe into the soil, and transmits soil readings and pictures to a computer screen.",
+    description: "A four-wheel field rover that drives between crop rows, pushes an N-P-K probe into the soil, logs nutrient readings with their GPS position and takes crop photos from a camera mast.",
+    shortDescription: "A 4WD field rover that measures soil nutrients, logs where it took each reading, and photographs the crops.",
+    howItWorks: "An Arduino Mega drives four geared motors through an L298N and watches the way ahead with two ultrasonic sensors. At each stop a servo lowers the N-P-K probe into the soil, the Mega reads nitrogen, phosphorus and potassium over RS485, tags the reading with the GPS position, and asks the ESP32-CAM on the mast to take a photo.",
     category: "IoT & Sensors",
     level: "Advanced",
     timeEstimate: "8 Hours",
-    partsCount: 20,
-    microcontroller: "Raspberry Pi Pico + Camera Module",
-    sensors: ["Soil Moisture Sensor (checks water in dirt)", "Temperature & Humidity Sensor", "Mini Camera Module"],
-    motorDriver: "High-Torque Motor Driver",
-    image: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80"
+    partsCount: 19,
+    microcontroller: "Arduino Mega 2560 R3 (the control brain)",
+    sensors: ["N-P-K Soil Nutrient Sensor (RS485)", "NEO-6M GPS Receiver", "ESP32-CAM Camera Module", "2x Ultrasonic Distance Sensors (obstacle detection)"],
+    motorDriver: "L298N Dual Motor Driver (left and right motor pairs)",
+    image: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80",
+    bom: [
+      { id: "ag-mcu-01", name: "Arduino Mega 2560 R3", whatIsIt: "A large Arduino board with 54 digital pins and four hardware serial ports.", whyUsed: "The rover talks to three serial devices at once (GPS, the soil sensor and the camera), which needs the Mega's extra serial ports.", qty: 1, spec: "ATmega2560, 16 MHz, 5V logic, 4 hardware UARTs, VIN 7–12 V.", category: "Electronics", priceEst: "₹1,150", inStock: true, storesAvailable: 4, alternative: { name: "ESP32 DevKit", useCase: "You want Wi-Fi on the main board.", whyItWorks: "It also has spare UARTs, but runs at 3.3 V, so every 5 V sensor needs level shifting." } },
+      { id: "ag-drv-01", name: "L298N Dual Motor Driver", whatIsIt: "A red board with a black heatsink that switches battery power to the motors.", whyUsed: "It drives the left motor pair and the right motor pair, with speed control on ENA/ENB.", qty: 1, spec: "Dual H-bridge, up to 2 A per channel, 5–35 V motor supply, onboard 5 V regulator.", category: "Electronics", priceEst: "₹160", inStock: true, storesAvailable: 4, alternative: { name: "TB6612FNG", useCase: "You want less heat and voltage loss.", whyItWorks: "A more efficient MOSFET driver with the same IN/PWM control style." } },
+      { id: "ag-mot-01", name: "25GA370 12V DC Gear Motors (200 RPM)", whatIsIt: "Metal-gearbox DC motors with a 4 mm D-shaft.", whyUsed: "Four of them give the rover 4WD torque to climb over soil clods and furrows.", qty: 4, spec: "12 V, 200 RPM, metal gearbox, 4 mm D-shaft.", category: "Movement", priceEst: "₹420", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "ag-whl-01", name: "85mm Off-Road Rubber Wheels", whatIsIt: "Deep-tread rubber tyres on plastic rims with a 4 mm hex coupler.", whyUsed: "The deep tread grips loose soil and grass where smooth wheels would spin.", qty: 4, spec: "85 mm diameter, 35 mm wide, 4 mm coupler included.", category: "Movement", priceEst: "₹180", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "ag-brk-01", name: "Motor Mounting Brackets with Suspension", whatIsIt: "Metal L-brackets for 25 mm motors, with a small spring-damper.", whyUsed: "They hold each motor under the lower plate and let each wheel follow uneven ground.", qty: 4, spec: "25 mm motor clamp, M3 holes, 50 mm spring damper.", category: "Structure", priceEst: "₹120", inStock: true, storesAvailable: 2, alternative: { name: "Plain 25 mm motor brackets", useCase: "You will only drive on flat paths.", whyItWorks: "They hold the motors just as well; you only lose the suspension." } },
+      { id: "ag-chs-01", name: "Two-Deck Round Carbon-Fibre Chassis Plates", whatIsIt: "A lower and an upper round carbon-fibre plate with pre-cut slots.", whyUsed: "The lower deck carries the drive electronics, the upper deck the Mega and battery.", qty: 1, spec: "2 × 220 mm round plates, 3 mm carbon fibre, pre-drilled for M3.", category: "Structure", priceEst: "₹1,200", inStock: true, storesAvailable: 2, alternative: { name: "4 mm acrylic plates", useCase: "You want a cheaper frame.", whyItWorks: "Same layout; acrylic is heavier and can crack on rough ground." } },
+      { id: "ag-cov-01", name: "Transparent Protective Top Cover", whatIsIt: "A clear acrylic disc that closes the top of the rover.", whyUsed: "It keeps dust, dew and leaves off the Mega and the wiring while still showing the build.", qty: 1, spec: "220 mm clear acrylic, 3 mm, with a mast cut-out.", category: "Structure", priceEst: "₹250", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "ag-hw-01", name: "M3 Metal Standoffs & Fasteners Pack", whatIsIt: "Hex standoffs, screws and nuts.", whyUsed: "They stack the lower deck, upper deck and cover, and hold every board off the plates.", qty: 1, spec: "M3 × 40 mm and M3 × 10 mm standoffs, screws, nuts.", category: "Structure", priceEst: "₹180", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-son-01", name: "HC-SR04 Ultrasonic Distance Sensors", whatIsIt: "Sound-echo distance sensors with two silver cylinders.", whyUsed: "Two of them look ahead-left and ahead-right on the front bracket so the rover stops before plants, stakes or people.", qty: 2, spec: "40 kHz, 2–400 cm, 5 V.", category: "Electronics", priceEst: "₹90", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-npk-01", name: "RS485 N-P-K Soil Nutrient Sensor", whatIsIt: "A three-prong steel probe that measures nitrogen, phosphorus and potassium in the soil.", whyUsed: "It is the rover's main instrument: each stop gives one N-P-K reading of the soil.", qty: 1, spec: "RS485 Modbus RTU, 4800 baud, 9–24 V supply, readings in mg/kg.", category: "Electronics", priceEst: "₹3,200", inStock: true, storesAvailable: 2, alternative: { name: "Capacitive soil moisture sensor", useCase: "You only need to know if the soil is dry.", whyItWorks: "Much cheaper and reads with one analog pin, but gives moisture only, not nutrients." } },
+      { id: "ag-485-01", name: "MAX485 TTL to RS485 Module", whatIsIt: "A tiny board that converts the Mega's serial signals to RS485.", whyUsed: "The N-P-K sensor talks RS485, which the Mega cannot read directly.", qty: 1, spec: "MAX485, 5 V, DE/RE direction control, A/B screw terminals.", category: "Electronics", priceEst: "₹60", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-srv-01", name: "MG996R Servo with Rack Probe Actuator", whatIsIt: "A high-torque servo turning a pinion that slides a rack up and down a vertical rail.", whyUsed: "It pushes the N-P-K probe into the soil at each stop and lifts it before the rover drives on.", qty: 1, spec: "MG996R metal-gear servo, 10 kg·cm at 6 V; 60 mm rack travel.", category: "Movement", priceEst: "₹450", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "ag-gps-01", name: "NEO-6M GPS Module with Active Antenna", whatIsIt: "A GPS receiver with a puck antenna.", whyUsed: "It tags every soil reading and photo with the latitude and longitude where it was taken.", qty: 1, spec: "u-blox NEO-6M, 9600 baud UART, 3–5 V, active ceramic antenna.", category: "Electronics", priceEst: "₹420", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-cam-01", name: "ESP32-CAM Camera Module (OV2640)", whatIsIt: "A small Wi-Fi board with a 2 MP camera and a micro-SD slot.", whyUsed: "Mounted on the mast, it photographs the crop at each stop and saves the picture to its SD card.", qty: 1, spec: "ESP32 + OV2640, 3.3 V logic, 5 V supply, micro-SD.", category: "Electronics", priceEst: "₹550", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-mst-01", name: "Camera & GPS Mast Support", whatIsIt: "A short printed tower that lifts the camera and GPS antenna above the cover.", whyUsed: "Height gives the camera a view over the crop and the GPS antenna a clear sky.", qty: 1, spec: "120 mm printed PLA/PETG mast with M3 holes.", category: "Structure", priceEst: "₹150", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "ag-bat-01", name: "3S 11.1V 2200mAh Li-Po Battery (XT60)", whatIsIt: "A rechargeable lithium-polymer pack.", whyUsed: "It powers the motors directly, the Mega through VIN and everything else through the buck converter.", qty: 1, spec: "3S 11.1 V nominal (12.6 V full), 2200 mAh, 25C, XT60 plug.", category: "Power", priceEst: "₹1,450", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "ag-swt-01", name: "Toggle Switch with XT60 Battery Lead", whatIsIt: "A panel toggle switch wired into an XT60 lead.", whyUsed: "One flick cuts all power, so the rover can be stopped fast in the field.", qty: 1, spec: "15 A toggle, 14 AWG silicone lead, XT60 female.", category: "Power", priceEst: "₹90", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "ag-buck-01", name: "LM2596 Buck Converter (5V Power Distribution)", whatIsIt: "An adjustable step-down regulator.", whyUsed: "It turns the 11.1 V battery into a clean 5 V rail for the servo, sensors, GPS and camera.", qty: 1, spec: "LM2596, 4–35 V in, set to 5.0 V out, 3 A max.", category: "Power", priceEst: "₹120", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "ag-wir-01", name: "Jumper Wires & Silicone Power Wire Kit", whatIsIt: "DuPont jumpers for signals and thick silicone wire for power.", whyUsed: "Jumpers carry the signals to the Mega; the silicone wire carries motor and battery current.", qty: 1, spec: "40 × 20 cm DuPont jumpers, 2 m of 18 AWG red/black silicone wire.", category: "Structure", priceEst: "₹150", inStock: true, storesAvailable: 4, alternative: null },
+    ],
+    steps: [
+      { stepNumber: 1, stage: "Step 1: Frame Prep", title: "Prepare the Two-Deck Chassis", time: "20 mins", description: "Lay out both carbon-fibre plates, the cover and the hardware pack.", whatToDo: "Check the lower plate, upper plate and clear cover, and sort the standoffs and screws.", howToDo: "Peel any film off the cover. Match the lower plate's motor-bracket holes to the bracket pattern, and check the mast cut-out in the cover lines up with the upper plate's centre slot.", whatYouSee: "Two round carbon plates and a clear disc, with M3 standoffs sorted by length.", checkpoints: ["No cracks or splits at the plate edges", "40 mm standoffs for the decks and 10 mm standoffs for the boards are sorted separately"], tip: "Carbon fibre dust is irritating: never sand the plates without a mask." },
+      { stepNumber: 2, stage: "Step 2: Suspension", title: "Fit the Motor Brackets and Suspension", time: "25 mins", description: "Bolt the four suspension brackets under the lower plate.", whatToDo: "Fit one bracket at each corner of the lower plate.", howToDo: "Use M3 screws and lock nuts through the corner holes. Fit each spring-damper between the bracket arm and the plate tab, with the motor clamp hanging below.", whatYouSee: "Four metal brackets under the plate, each able to rock a little against its spring.", checkpoints: ["Each bracket swings and springs back freely", "All four clamps are at the same height"], tip: "Fit all four springs the same way round so the rover sits level." },
+      { stepNumber: 3, stage: "Step 3: Drive Motors", title: "Mount the Four DC Gear Motors", time: "25 mins", description: "Clamp a 25GA370 gear motor into each bracket.", whatToDo: "Slide each motor into its clamp with the shaft pointing outward.", howToDo: "Tighten the clamp screws evenly. Route each motor's two wires inward toward the centre slot of the lower plate.", whatYouSee: "Four metal gear motors under the lower plate, shafts pointing out to the sides.", checkpoints: ["All four shafts point straight out, square to the plate", "Motor wires reach the centre slot without strain"], tip: "Label the wires FL, FR, RL, RR now: it saves guesswork when wiring the driver." },
+      { stepNumber: 4, stage: "Step 4: Wheels", title: "Attach the Off-Road Wheels", time: "15 mins", description: "Fit the four 85 mm off-road wheels.", whatToDo: "Fit a hex coupler to each shaft, then push a wheel onto each coupler.", howToDo: "Tighten each coupler's grub screw on the flat of the D-shaft, then fix the wheel with its centre screw.", whatYouSee: "The rover stands on four chunky wheels with the lower plate clear of the ground.", checkpoints: ["No wheel wobbles when spun by hand", "All four tyres touch a flat floor"], tip: "Put a drop of thread-lock on the grub screws: field vibration loosens them." },
+      { stepNumber: 5, stage: "Step 5: Lower Deck", title: "Mount the Driver, Buck Converter and MAX485", time: "20 mins", description: "Fit the drive electronics on the lower deck.", whatToDo: "Mount the L298N in the middle, the LM2596 buck converter on the right and the MAX485 module on the left.", howToDo: "Use 10 mm standoffs under each board. Before mounting the buck converter, power it from the battery and turn its trimmer until the output reads 5.0 V on a multimeter.", whatYouSee: "Three boards on the lower deck: red driver in the middle, blue buck converter and small MAX485 either side.", checkpoints: ["Buck converter output set to 5.0 V before anything is connected to it", "Driver heatsink has air around it"], tip: "Setting the buck to 5.0 V first is essential: out of the box it can output far more and destroy the 5 V parts." },
+      { stepNumber: 6, stage: "Step 6: Motor Wiring", title: "Wire the Motors to the L298N", time: "25 mins", description: "Connect the left motor pair and the right motor pair to the driver outputs.", whatToDo: "Join the two left motors in parallel to OUT1/OUT2 and the two right motors to OUT3/OUT4.", howToDo: "Twist each pair's matching wires together (red with red, black with black) and clamp them in the driver's screw terminals. Clamp bare copper, not insulation.", whatYouSee: "Four motor wires from each side meeting at the driver's side terminals.", checkpoints: ["The front and rear motor on each side are wired the same way round", "No loose strands touch the next terminal"], tip: "If one wheel later spins the wrong way, swap only that motor's two wires." },
+      { stepNumber: 7, stage: "Step 7: Front Sensors", title: "Fit the Front Ultrasonic Sensors", time: "15 mins", description: "Mount the two HC-SR04 sensors on the front bracket.", whatToDo: "Fit the front bracket to the lower plate's nose, then clip the two sensors into it.", howToDo: "Screw the bracket to the front holes. Angle the left sensor a little left and the right one a little right, cylinders facing forward.", whatYouSee: "Two pairs of silver 'eyes' at the front of the rover, just above the wheels.", checkpoints: ["Nothing blocks the cylinders", "The pins point up so the wires can reach them"], tip: "Mount them high enough that they don't see the ground or the tops of short grass as an obstacle." },
+      { stepNumber: 8, stage: "Step 8: Probe Actuator", title: "Build the N-P-K Probe Actuator", time: "30 mins", description: "Assemble the servo, rack and N-P-K probe on the side rail.", whatToDo: "Fix the rail to the right side of the lower plate, fit the MG996R at its top and clamp the N-P-K sensor to the rack.", howToDo: "Bolt the rail upright. Mount the servo with its pinion meshing the rack, then clamp the sensor body to the bottom of the rack with the three prongs pointing down.", whatYouSee: "A vertical rail on the rover's side with the probe hanging above the ground.", checkpoints: ["The rack slides its full travel without catching", "With the rack fully down the prongs reach about 4 cm into the ground"], tip: "Centre the servo (90°) before fitting the pinion so the full travel is available both ways." },
+      { stepNumber: 9, stage: "Step 9: Upper Deck", title: "Stack the Upper Deck with the Mega and Battery", time: "25 mins", description: "Fit the upper plate and mount the Arduino Mega, the battery and the toggle switch.", whatToDo: "Screw the 40 mm standoffs onto the lower plate, fit the upper plate, then mount the Mega in the centre and the battery at the rear.", howToDo: "Pass the driver, MAX485 and sensor wires up through the centre slot before fitting the upper plate. Mount the Mega on 10 mm standoffs and strap the battery down with a Velcro strap. Fit the toggle switch on the right edge.", whatYouSee: "Two decks, the blue Mega in the middle of the top deck, the battery behind it and the switch at the side.", checkpoints: ["All wires from below come up through the slot without pinching", "The battery strap is tight"], tip: "Keep the battery at the rear to balance the weight of the probe actuator." },
+      { stepNumber: 10, stage: "Step 10: Signal Wiring", title: "Wire the Signals to the Arduino Mega", time: "40 mins", description: "Connect the driver, sensors, MAX485 and servo to the Mega.", whatToDo: "Wire every signal in the pin table: driver ENA/IN1–IN4/ENB, both sonars, the MAX485 and the servo.", howToDo: "Use jumper wires: ENA → D5, IN1 → D8, IN2 → D9, IN3 → D10, IN4 → D11, ENB → D6; left sonar Trig/Echo → D22/D23, right sonar → D24/D25; MAX485 RO → RX2 (D17), DI → TX2 (D16), DE + RE → D4; servo signal → D3. Power the sonars, MAX485 and servo from the buck converter's 5 V rail.", whatYouSee: "A neat fan of coloured jumpers from the Mega's pin headers down to each module.", checkpoints: ["Remove the L298N's ENA/ENB jumper caps so D5/D6 control speed", "MAX485 A and B go to the N-P-K sensor's yellow (A) and blue (B) wires"], tip: "Tie the sensor wires into a bundle and keep them away from the motor wires to avoid noise." },
+      { stepNumber: 11, stage: "Step 11: Power Wiring", title: "Wire the Battery, Switch and Common Ground", time: "25 mins", description: "Connect switched battery power to the driver, the Mega, the buck converter and the N-P-K sensor.", whatToDo: "Run the switched battery + to the L298N 12V input, the Mega's VIN, the buck converter's IN+ and the N-P-K sensor's brown wire. Join every ground together.", howToDo: "Use silicone wire for battery current. Join the battery (−), driver GND, buck GND, Mega GND and the sensor's black wire on one ground point.", whatYouSee: "A short red and black power harness from the switch to each board.", checkpoints: ["Switch OFF and battery unplugged while wiring", "One common ground joins every board"], tip: "A shared ground is critical: without it the Mega's signals mean nothing to the driver and the MAX485." },
+      { stepNumber: 12, stage: "Step 12: Mast & Cover", title: "Mount the Mast, GPS and Camera, Then the Cover", time: "30 mins", description: "Fit the mast with the GPS antenna on top and the ESP32-CAM facing forward, then close the cover.", whatToDo: "Bolt the mast to the upper plate through the cover's cut-out, mount the GPS puck on top and the ESP32-CAM below it facing forward.", howToDo: "Wire the GPS TX → Mega RX1 (D19) and RX → TX1 (D18); the ESP32-CAM U0T → RX3 (D15) and U0R → TX3 (D14) through a 1 kΩ/2 kΩ divider. Power both from the 5 V rail. Fit the cover on its standoffs last.", whatYouSee: "A camera and GPS antenna standing above the clear cover, like the rover's head.", checkpoints: ["The GPS antenna faces the sky with nothing metal above it", "The ESP32-CAM's RX has the voltage divider"], tip: "The first GPS fix outdoors can take a few minutes: leave the rover still under open sky." },
+      { stepNumber: 13, stage: "Step 13: Program & Field Test", title: "Upload the Code and Test in the Field", time: "45 mins", description: "Upload the rover program and run a sampling route.", whatToDo: "Upload the sketch to the Mega, then test driving, obstacle stops, probe sampling and GPS logging.", howToDo: "Install the TinyGPSPlus and Servo libraries, upload with the battery switch OFF, then switch on. Open the Serial Monitor at 115200 baud and watch for N-P-K readings with GPS positions at each stop.", whatYouSee: "The rover drives, stops, lowers its probe and prints a line like 'N 42  P 18  K 120 mg/kg @ 28.61234, 77.20912'.", checkpoints: ["Readings change when the probe is in moist soil", "The rover stops before an obstacle about 30 cm ahead"], tip: "N-P-K sensors need moist soil: in dry ground they read near zero. Water a test patch first." },
+    ],
+    pinout: [
+      { componentPin: "L298N ENA (Left Speed)", targetPin: "Mega D5 (PWM)", wireColor: "White", type: "PWM", notes: "Speed of the left motor pair. Remove the ENA jumper cap." },
+      { componentPin: "L298N IN1", targetPin: "Mega D8", wireColor: "Blue", type: "Digital", notes: "Left pair forward" },
+      { componentPin: "L298N IN2", targetPin: "Mega D9", wireColor: "Purple", type: "Digital", notes: "Left pair backward" },
+      { componentPin: "L298N IN3", targetPin: "Mega D10", wireColor: "Orange", type: "Digital", notes: "Right pair forward" },
+      { componentPin: "L298N IN4", targetPin: "Mega D11", wireColor: "Brown", type: "Digital", notes: "Right pair backward" },
+      { componentPin: "L298N ENB (Right Speed)", targetPin: "Mega D6 (PWM)", wireColor: "Gray", type: "PWM", notes: "Speed of the right motor pair. Remove the ENB jumper cap." },
+      { componentPin: "Left Sonar Trig", targetPin: "Mega D22", wireColor: "Yellow", type: "Digital", notes: "Sends the left sensor's sound pulse" },
+      { componentPin: "Left Sonar Echo", targetPin: "Mega D23", wireColor: "Green", type: "Digital", notes: "Times the left sensor's echo" },
+      { componentPin: "Right Sonar Trig", targetPin: "Mega D24", wireColor: "Yellow", type: "Digital", notes: "Sends the right sensor's sound pulse" },
+      { componentPin: "Right Sonar Echo", targetPin: "Mega D25", wireColor: "Green", type: "Digital", notes: "Times the right sensor's echo" },
+      { componentPin: "GPS TX", targetPin: "Mega RX1 (D19)", wireColor: "Yellow", type: "Digital", notes: "Position data from the GPS at 9600 baud" },
+      { componentPin: "GPS RX", targetPin: "Mega TX1 (D18)", wireColor: "Blue", type: "Digital", notes: "Optional: configuration commands to the GPS" },
+      { componentPin: "MAX485 RO", targetPin: "Mega RX2 (D17)", wireColor: "Green", type: "Digital", notes: "Soil readings coming back from the N-P-K sensor" },
+      { componentPin: "MAX485 DI", targetPin: "Mega TX2 (D16)", wireColor: "White", type: "Digital", notes: "Read requests going out to the N-P-K sensor" },
+      { componentPin: "MAX485 DE + RE", targetPin: "Mega D4", wireColor: "Orange", type: "Digital", notes: "HIGH to send, LOW to listen (both pins joined)" },
+      { componentPin: "ESP32-CAM U0T", targetPin: "Mega RX3 (D15)", wireColor: "Yellow", type: "Digital", notes: "Photo confirmations from the camera" },
+      { componentPin: "ESP32-CAM U0R", targetPin: "Mega TX3 (D14)", wireColor: "Blue", type: "Digital", notes: "Photo commands to the camera, through a 1 kΩ/2 kΩ voltage divider (the ESP32 is 3.3 V)" },
+      { componentPin: "Probe Servo Signal", targetPin: "Mega D3 (PWM)", wireColor: "Orange", type: "PWM", notes: "Lowers and lifts the N-P-K probe" },
+      { componentPin: "Li-Po Battery + (via switch)", targetPin: "Mega VIN", wireColor: "Red", type: "Power", notes: "11.1 V into the Mega's own regulator" },
+      { componentPin: "L298N 12V In", targetPin: "Battery + (via switch)", wireColor: "Red", type: "Power", notes: "Switched battery power for the motors" },
+      { componentPin: "System Ground", targetPin: "Mega GND + Driver GND + Buck GND + Battery (-)", wireColor: "Black", type: "Ground", notes: "One common ground for every board" },
+    ],
+    arduinoCode: `// =================================================================
+// Smart Agro Rover — Arduino Mega 2560
+// Drives a sampling route, avoids obstacles, lowers an N-P-K probe
+// at each stop, tags the reading with GPS and triggers a crop photo.
+// Libraries: TinyGPSPlus, Servo
+// =================================================================
+#include <TinyGPSPlus.h>
+#include <Servo.h>
+
+// ---------- Motor driver (L298N) ----------
+const int ENA = 5, IN1 = 8, IN2 = 9;     // left motor pair
+const int ENB = 6, IN3 = 10, IN4 = 11;   // right motor pair
+const int DRIVE_SPEED = 170;             // 0-255
+
+// ---------- Front ultrasonic sensors ----------
+const int TRIG_L = 22, ECHO_L = 23;
+const int TRIG_R = 24, ECHO_R = 25;
+const int STOP_DIST_CM = 30;
+
+// ---------- N-P-K sensor over RS485 (MAX485 on Serial2) ----------
+const int RS485_DIR = 4;                 // DE + RE joined
+const byte REQ_N[] = {0x01, 0x03, 0x00, 0x1E, 0x00, 0x01, 0xE4, 0x0C};
+const byte REQ_P[] = {0x01, 0x03, 0x00, 0x1F, 0x00, 0x01, 0xB5, 0xCC};
+const byte REQ_K[] = {0x01, 0x03, 0x00, 0x20, 0x00, 0x01, 0x85, 0xC0};
+
+// ---------- Probe actuator ----------
+const int PROBE_SERVO = 3;
+const int PROBE_UP = 20, PROBE_DOWN = 160;   // servo angles
+Servo probe;
+
+// ---------- Route ----------
+const unsigned long LEG_MS = 4000;       // drive time between stops
+TinyGPSPlus gps;
+
+void setup() {
+  Serial.begin(115200);                  // to the computer
+  Serial1.begin(9600);                   // GPS
+  Serial2.begin(4800);                   // N-P-K sensor
+  Serial3.begin(115200);                 // ESP32-CAM
+
+  int outs[] = {ENA, IN1, IN2, ENB, IN3, IN4, TRIG_L, TRIG_R, RS485_DIR};
+  for (int p : outs) pinMode(p, OUTPUT);
+  pinMode(ECHO_L, INPUT);
+  pinMode(ECHO_R, INPUT);
+  digitalWrite(RS485_DIR, LOW);          // listen by default
+
+  probe.attach(PROBE_SERVO);
+  probe.write(PROBE_UP);
+  stopMotors();
+  Serial.println("Smart Agro Rover ready");
+}
+
+void loop() {
+  unsigned long legStart = millis();
+  while (millis() - legStart < LEG_MS) {
+    feedGps();
+    if (min(readCm(TRIG_L, ECHO_L), readCm(TRIG_R, ECHO_R)) < STOP_DIST_CM) {
+      stopMotors();
+      delay(300);
+      turnAway();
+    } else {
+      drive(DRIVE_SPEED, DRIVE_SPEED);
+    }
+  }
+  stopMotors();
+  takeSample();
+}
+
+// ---------- Driving ----------
+void drive(int left, int right) {
+  digitalWrite(IN1, left >= 0);  digitalWrite(IN2, left < 0);
+  digitalWrite(IN3, right >= 0); digitalWrite(IN4, right < 0);
+  analogWrite(ENA, abs(left));
+  analogWrite(ENB, abs(right));
+}
+
+void stopMotors() { drive(0, 0); }
+
+void turnAway() {
+  // turn toward the side with more room
+  bool leftClear = readCm(TRIG_L, ECHO_L) > readCm(TRIG_R, ECHO_R);
+  if (leftClear) drive(-DRIVE_SPEED, DRIVE_SPEED);
+  else drive(DRIVE_SPEED, -DRIVE_SPEED);
+  delay(450);
+  stopMotors();
+}
+
+long readCm(int trig, int echo) {
+  digitalWrite(trig, LOW);  delayMicroseconds(2);
+  digitalWrite(trig, HIGH); delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  long us = pulseIn(echo, HIGH, 25000);  // time out after ~4 m
+  return us == 0 ? 400 : us / 58;
+}
+
+// ---------- Sampling ----------
+void takeSample() {
+  probe.write(PROBE_DOWN);               // push the probe into the soil
+  delay(2500);                           // let the reading settle
+  int n = readNpk(REQ_N);
+  int p = readNpk(REQ_P);
+  int k = readNpk(REQ_K);
+  probe.write(PROBE_UP);
+
+  Serial3.println("SNAP");               // ask the ESP32-CAM for a photo
+  delay(800);
+
+  feedGps();
+  Serial.print("N "); Serial.print(n);
+  Serial.print("  P "); Serial.print(p);
+  Serial.print("  K "); Serial.print(k);
+  Serial.print(" mg/kg @ ");
+  if (gps.location.isValid()) {
+    Serial.print(gps.location.lat(), 5); Serial.print(", ");
+    Serial.println(gps.location.lng(), 5);
+  } else {
+    Serial.println("no GPS fix yet");
+  }
+}
+
+int readNpk(const byte *request) {
+  while (Serial2.available()) Serial2.read();   // clear old bytes
+  digitalWrite(RS485_DIR, HIGH);
+  Serial2.write(request, 8);
+  Serial2.flush();
+  digitalWrite(RS485_DIR, LOW);
+
+  byte reply[7];
+  unsigned long start = millis();
+  int got = 0;
+  while (got < 7 && millis() - start < 500) {
+    if (Serial2.available()) reply[got++] = Serial2.read();
+  }
+  if (got < 7) return -1;                // no answer: check A/B and 12 V
+  return (reply[3] << 8) | reply[4];
+}
+
+void feedGps() {
+  while (Serial1.available()) gps.encode(Serial1.read());
+}`,
+    faqs: [
+      { q: "Why does the rover use an Arduino Mega instead of an Uno?", a: "It needs three serial ports at once: GPS on Serial1, the N-P-K sensor on Serial2 and the camera on Serial3. The Uno has only one hardware serial port, which is also used for uploading." },
+      { q: "The N-P-K readings are all -1. What is wrong?", a: "-1 means the sensor did not answer. Check that the sensor's brown wire has switched battery power (it needs 9–24 V), that its yellow wire goes to MAX485 A and blue to B, and that DE and RE are joined and wired to D4." },
+      { q: "The readings are close to zero even in the garden.", a: "N-P-K probes only read reliably in moist soil. Water a patch before testing and push the probe fully in so all three prongs are buried." },
+      { q: "The GPS never gets a fix.", a: "GPS needs open sky. Indoors or next to buildings it may never lock. Leave the rover still outside for 2–5 minutes the first time, with nothing metal over the antenna." },
+      { q: "How does the ESP32-CAM save the photos?", a: "The Mega only sends the word SNAP over Serial3. The ESP32-CAM needs its own small sketch (flashed separately) that listens for SNAP, takes a photo and saves it to its micro-SD card." },
+    ],
   },
   {
     slug: "balancebot-pro",
     title: "BalanceBot Pro",
     badge: "SELF-BALANCING",
     description: "A two-wheeled robot that balances upright on its own, just like a person balancing a broom on their hand.",
-    howItWorks: "A tilt sensor measures which way the robot is leaning. The motors immediately drive in that direction to keep the robot upright.",
+    shortDescription: "A two-wheeled, four-deck robot that keeps itself upright with a gyro, wheel encoders and a PID controller, and drives where you steer it from your phone.",
+    howItWorks: "An MPU6050 gyro-accelerometer measures which way the robot is leaning, hundreds of times a second. A PID controller on the Arduino Uno turns that tilt into motor commands, driving the wheels under the robot to catch it. Wheel encoders stop it drifting away, and an HC-05 Bluetooth link lets you steer it from a phone.",
     category: "Autonomous Rovers",
     level: "Intermediate",
     timeEstimate: "5.5 Hours",
-    partsCount: 16,
+    partsCount: 15,
     microcontroller: "Arduino Uno R3",
-    sensors: ["Gyro Tilt Sensor (senses which way the robot leans)", "Wheel Speed Encoders"],
-    motorDriver: "High-Speed Motor Driver Board",
-    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"
+    sensors: ["MPU6050 Gyro + Accelerometer (senses which way the robot leans)", "Hall Wheel Encoders (measure wheel speed)", "ESP32-CAM Camera (FPV view)"],
+    motorDriver: "TB6612FNG Dual Motor Driver",
+    image: "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80",
+    bom: [
+      { id: "bb-mcu-01", name: "Arduino Uno R3", whatIsIt: "The robot's small computer board.", whyUsed: "It runs the balancing loop: reads the tilt, works out the PID correction and drives the motors about 200 times a second.", qty: 1, spec: "ATmega328P, 16 MHz, 5 V logic, interrupts on D2 and D3.", category: "Electronics", priceEst: "₹650", inStock: true, storesAvailable: 4, alternative: { name: "Arduino Nano", useCase: "You want a smaller board.", whyItWorks: "Same chip and pins, including the D2/D3 interrupts the encoders need." } },
+      { id: "bb-imu-01", name: "MPU6050 Gyro + Accelerometer (IMU)", whatIsIt: "A tiny board with a 3-axis gyroscope and a 3-axis accelerometer.", whyUsed: "It tells the robot exactly how far and how fast it is tipping, the single most important number for balancing.", qty: 1, spec: "MPU6050 on a GY-521 board, I²C at address 0x68, 3.3–5 V.", category: "Electronics", priceEst: "₹150", inStock: true, storesAvailable: 4, alternative: { name: "MPU9250", useCase: "You also want a compass.", whyItWorks: "Same gyro and accelerometer readings over I²C, plus a magnetometer." } },
+      { id: "bb-drv-01", name: "TB6612FNG Dual Motor Driver", whatIsIt: "A small, efficient H-bridge board for two DC motors.", whyUsed: "It switches the battery to the motors fast and with little voltage loss, so the motors react instantly to each correction.", qty: 1, spec: "1.2 A per channel (3.2 A peak), VM up to 15 V, PWM up to 100 kHz, STBY pin.", category: "Electronics", priceEst: "₹250", inStock: true, storesAvailable: 4, alternative: { name: "L298N", useCase: "You already have one.", whyItWorks: "It works, but drops about 2 V and reacts more slowly, so balancing is less crisp." } },
+      { id: "bb-mot-01", name: "JGB37-520 12V Gear Motors with Hall Encoders", whatIsIt: "Metal-gearbox DC motors with a magnetic encoder disc on the back.", whyUsed: "High torque catches the robot quickly; the encoders count wheel turns so the robot can hold its position.", qty: 2, spec: "12 V, 330 RPM, 6 mm D-shaft, 11-pulse Hall encoder (A/B outputs), 5 V encoder supply.", category: "Movement", priceEst: "₹850", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "bb-brk-01", name: "37mm Motor Mounting Brackets", whatIsIt: "L-shaped metal brackets sized for 37 mm gear motors.", whyUsed: "They bolt each motor firmly under the base plate so the wheels can't flex under load.", qty: 2, spec: "37 mm motor face, M3 holes, with screws.", category: "Structure", priceEst: "₹120", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "bb-whl-01", name: "85mm High-Traction Rubber Wheels with 6mm Couplings", whatIsIt: "Rubber-tyred wheels with a metal hub and a coupling for 6 mm shafts.", whyUsed: "Soft rubber grips the floor so the wheels never slip when the robot catches itself.", qty: 2, spec: "85 mm diameter, 6 mm hex coupling with grub screws.", category: "Movement", priceEst: "₹220", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "bb-chs-01", name: "Four-Deck Round Carbon-Fibre Chassis Plates", whatIsIt: "Four round plates: base, intermediate, middle and top.", whyUsed: "Stacking the parts in decks puts the heavy battery low and the IMU near the middle, which makes balancing easier to tune.", qty: 1, spec: "4 × 160 mm round plates, 3 mm carbon fibre, pre-drilled for M3.", category: "Structure", priceEst: "₹1,400", inStock: true, storesAvailable: 2, alternative: { name: "4 mm acrylic plates", useCase: "You want a cheaper frame.", whyItWorks: "Same layout; slightly heavier and less stiff." } },
+      { id: "bb-hw-01", name: "M3 Brass Standoffs & Fasteners Pack", whatIsIt: "Hex standoffs, screws and nuts.", whyUsed: "They stack the four decks and hold the boards off the plates.", qty: 1, spec: "M3 × 45 mm deck standoffs, M3 × 10 mm board standoffs, screws and nuts.", category: "Structure", priceEst: "₹180", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "bb-bat-01", name: "3S 11.1V 1500mAh Li-Po Battery (XT60)", whatIsIt: "A rechargeable lithium-polymer pack.", whyUsed: "It powers the motors through the driver and the Arduino through VIN; mounted on the base deck, its weight keeps the robot's centre low.", qty: 1, spec: "3S 11.1 V nominal (12.6 V full), 1500 mAh, 25C, XT60.", category: "Power", priceEst: "₹1,200", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "bb-swt-01", name: "Toggle Switch with XT60 Battery Lead", whatIsIt: "A panel toggle switch wired into an XT60 lead.", whyUsed: "One flick cuts all power when the robot falls or runs off.", qty: 1, spec: "15 A toggle, 16 AWG silicone lead, XT60 female.", category: "Power", priceEst: "₹90", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "bb-buck-01", name: "LM2596 Buck Converter (5V Power Distribution)", whatIsIt: "An adjustable step-down regulator.", whyUsed: "It makes a separate 5 V supply for the camera, so its Wi-Fi bursts don't disturb the Arduino.", qty: 1, spec: "LM2596, 4–35 V in, set to 5.0 V out, 3 A max.", category: "Power", priceEst: "₹120", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "bb-bt-01", name: "HC-05 Bluetooth Module", whatIsIt: "A Bluetooth serial module with a small antenna.", whyUsed: "It receives forward, back and turn commands from a phone app so you can drive the robot while it balances.", qty: 1, spec: "Bluetooth 2.0 SPP, 9600 baud, 3.3 V logic on RX, 5 V supply.", category: "Electronics", priceEst: "₹280", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "bb-cam-01", name: "ESP32-CAM Camera Module (FPV)", whatIsIt: "A small Wi-Fi board with a 2 MP camera.", whyUsed: "It streams a first-person view from the top plate to your phone or laptop over Wi-Fi.", qty: 1, spec: "ESP32 + OV2640, 5 V supply, runs its own streaming sketch.", category: "Electronics", priceEst: "₹550", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "bb-mst-01", name: "Printed Camera Mount", whatIsIt: "A small printed bracket that holds the camera upright.", whyUsed: "It points the camera forward from the top plate.", qty: 1, spec: "PLA/PETG, M3 holes.", category: "Structure", priceEst: "₹100", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "bb-wir-01", name: "Jumper Wires & Silicone Power Wire Kit", whatIsIt: "DuPont jumpers for signals and silicone wire for power.", whyUsed: "Jumpers carry the IMU, encoder and driver signals; silicone wire carries the battery and motor current.", qty: 1, spec: "40 × 20 cm DuPont jumpers, 1 m of 18 AWG red/black silicone wire.", category: "Structure", priceEst: "₹150", inStock: true, storesAvailable: 4, alternative: null },
+    ],
+    steps: [
+      { stepNumber: 1, stage: "Step 1: Frame Prep", title: "Prepare the Four-Deck Chassis", time: "15 mins", description: "Lay out the four carbon plates and sort the standoffs.", whatToDo: "Identify the base, intermediate, middle and top plates and sort the 45 mm and 10 mm standoffs.", howToDo: "The base plate has the two motor-bracket slots; the top plate has the camera cut-out. Check every plate has its six pillar holes lined up.", whatYouSee: "Four round carbon plates stacked loosely in order, with the hardware sorted.", checkpoints: ["All six pillar holes line up through all four plates", "Long and short standoffs are sorted"], tip: "Never sand carbon fibre without a mask." },
+      { stepNumber: 2, stage: "Step 2: Motor Brackets", title: "Mount the Motor Brackets on the Base Plate", time: "15 mins", description: "Bolt the two 37 mm brackets under the base plate.", whatToDo: "Fit one bracket on each side of the base plate, motor faces pointing outward.", howToDo: "Use M3 screws and nuts through the bracket slots. Both brackets must sit on the same line through the plate's centre.", whatYouSee: "Two metal brackets hanging under the base plate, facing left and right.", checkpoints: ["Both brackets are on one straight line through the centre", "Screws are tight"], tip: "The wheels must be exactly opposite each other, or the robot will turn as it balances." },
+      { stepNumber: 3, stage: "Step 3: Encoder Motors", title: "Fit the Encoder Gear Motors", time: "20 mins", description: "Screw a JGB37-520 motor into each bracket.", whatToDo: "Fit each motor with its shaft through the bracket and its encoder board facing the centre.", howToDo: "Use the M3 screws supplied with the motors through the bracket face. Route each motor's 6-wire encoder cable inward.", whatYouSee: "Two metal gear motors under the base plate, shafts pointing out to the sides.", checkpoints: ["Both shafts are at the same height", "Encoder cables reach the centre without strain"], tip: "Note which motor is left and which is right on its cable before wiring." },
+      { stepNumber: 4, stage: "Step 4: Wheels", title: "Attach the Wheels with Their Couplings", time: "10 mins", description: "Fit the 6 mm couplings and the 85 mm wheels.", whatToDo: "Fix a coupling on each motor shaft, then bolt a wheel to each coupling.", howToDo: "Tighten each coupling's grub screws on the flat of the D-shaft, then fix the wheel to the coupling with its screws.", whatYouSee: "The chassis stands on two wheels (it falls over until it's switched on).", checkpoints: ["No wheel wobbles when spun", "Both wheels touch the floor at the same time"], tip: "Thread-lock the grub screws: balancing makes the motors reverse hundreds of times a minute." },
+      { stepNumber: 5, stage: "Step 5: Battery Deck", title: "Fit the Battery on the Base Deck", time: "15 mins", description: "Strap the Li-Po to the base plate and fit the intermediate plate above it.", whatToDo: "Strap the battery to the middle of the base plate, then screw on the first set of standoffs and the intermediate plate.", howToDo: "Use a Velcro strap through the base plate slots. Pass the battery lead and both motor cables up through the intermediate plate's slot before fitting it.", whatYouSee: "The battery sits low between the base and intermediate plates.", checkpoints: ["The battery is centred left-to-right", "Battery lead and motor cables come up through the slot"], tip: "A low, centred battery makes the robot much easier to balance." },
+      { stepNumber: 6, stage: "Step 6: Driver Deck", title: "Mount the Motor Driver and Buck Converter", time: "20 mins", description: "Fit the TB6612FNG and the LM2596 on the intermediate deck.", whatToDo: "Mount the motor driver in the centre and the buck converter at the side.", howToDo: "Use 10 mm standoffs. Before mounting the buck converter, power it from the battery and set its output to 5.0 V with a multimeter.", whatYouSee: "The small driver board in the middle of the deck and the blue buck converter beside it.", checkpoints: ["Buck converter output set to 5.0 V", "Driver pins are reachable from above"], tip: "Set the buck to 5.0 V before connecting anything: out of the box it can put out far more." },
+      { stepNumber: 7, stage: "Step 7: Motor Wiring", title: "Wire the Motors to the Driver", time: "15 mins", description: "Connect each motor's power pair to the TB6612FNG outputs.", whatToDo: "Left motor M1/M2 to A01/A02, right motor M1/M2 to B01/B02.", howToDo: "Use the red and white motor-power wires from each encoder cable. Keep the four encoder wires (VCC, GND, A, B) free for later.", whatYouSee: "Two thick motor pairs reaching the driver's output pins.", checkpoints: ["Left motor on A, right motor on B", "Encoder wires kept separate"], tip: "If a wheel later turns the wrong way, swap that motor's two power wires." },
+      { stepNumber: 8, stage: "Step 8: Brain Deck", title: "Mount the Arduino Uno on the Middle Deck", time: "15 mins", description: "Fit the middle plate and mount the Uno on it.", whatToDo: "Screw on the next standoffs and the middle plate, then mount the Uno with its USB port toward the back.", howToDo: "Use 10 mm standoffs under the Uno. Fit the toggle switch on the edge of the middle deck where you can reach it.", whatYouSee: "The blue Uno in the middle of the robot with the switch on the side.", checkpoints: ["The USB port can be reached for uploading", "The switch can be flicked from outside"], tip: "Keep the Uno's USB toward the back so the cable doesn't snag when the robot leans." },
+      { stepNumber: 9, stage: "Step 9: IMU", title: "Mount the MPU6050 Firmly at the Centre", time: "10 mins", description: "Fix the IMU flat, level and centred on the middle deck.", whatToDo: "Mount the MPU6050 next to the Uno, flat on the plate, with its X arrow pointing forward.", howToDo: "Use two short standoffs or strong double-sided foam tape. It must not wobble at all.", whatYouSee: "The small blue IMU board lying flat beside the Uno.", checkpoints: ["The IMU doesn't move when you tap the deck", "Its X arrow points to the robot's front"], tip: "A loose IMU is the most common cause of a wobbly robot: mount it rigidly." },
+      { stepNumber: 10, stage: "Step 10: Signal Wiring", title: "Wire the Driver, IMU and Encoders to the Uno", time: "35 mins", description: "Connect every signal from the pin table.", whatToDo: "Driver PWMA/AIN1/AIN2/PWMB/BIN1/BIN2/STBY, IMU SDA/SCL, both encoders and the HC-05.", howToDo: "PWMA → D5, AIN1 → D7, AIN2 → D8, PWMB → D6, BIN1 → D9, BIN2 → D10, STBY → D4; IMU SDA → A4, SCL → A5; left encoder A → D2, B → D11; right encoder A → D3, B → A0; HC-05 TX → A2, RX → A3 through a 1 kΩ/2 kΩ divider. Power the IMU, encoders, HC-05 and the driver's VCC from the Uno's 5V and GND.", whatYouSee: "A fan of jumpers from the Uno down to the driver and out to the motors and IMU.", checkpoints: ["Encoder A channels are on D2 and D3 (the interrupt pins)", "The HC-05 RX has the voltage divider"], tip: "Keep the IMU wires short and away from the motor wires." },
+      { stepNumber: 11, stage: "Step 11: Power Wiring", title: "Wire the Battery, Switch and Common Ground", time: "20 mins", description: "Run switched battery power to the driver, the Uno and the buck converter.", whatToDo: "Battery + to the switch; switched + to the driver's VM, the Uno's VIN and the buck's IN+. Join every ground.", howToDo: "Use silicone wire for the battery current. Join battery (−), driver GND, Uno GND and buck GND at one point.", whatYouSee: "A short red and black power harness from the switch to the boards.", checkpoints: ["Switch OFF and battery unplugged while wiring", "One common ground joins every board"], tip: "Without a common ground the driver ignores the Uno's signals." },
+      { stepNumber: 12, stage: "Step 12: Top Plate", title: "Fit the Top Plate with the HC-05 and Camera", time: "20 mins", description: "Close the tower with the top plate carrying the Bluetooth module and the camera.", whatToDo: "Mount the HC-05 and the camera mount on the top plate, then fit it on the last standoffs.", howToDo: "Wire the ESP32-CAM's 5V and GND to the buck converter's output. Stand the HC-05 antenna upright.", whatYouSee: "The finished four-deck tower with the camera looking forward from the top.", checkpoints: ["The camera faces the robot's front", "Nothing on the top plate hangs off to one side"], tip: "Keep the top light: weight high up makes the robot slower to fall but harder to correct." },
+      { stepNumber: 13, stage: "Step 13: Program & Tune", title: "Upload, Find the Balance Point and Tune the PID", time: "45 mins", description: "Upload the sketch, set the balance angle and tune Kp, Ki and Kd.", whatToDo: "Upload with the switch OFF, then hold the robot upright and switch on.", howToDo: "Open the Serial Monitor at 115200 baud and note the angle when the robot is perfectly balanced by hand: put it in BALANCE_ANGLE. Raise Kp until it oscillates, then add Kd to calm it, then a little Ki to stop slow drift.", whatYouSee: "The robot stands on its own and rocks gently back and forth while holding its place.", checkpoints: ["The robot catches itself when nudged", "It holds its position instead of rolling away"], tip: "Tune with the robot held loosely over a soft surface: it will fall a lot at first." },
+    ],
+    pinout: [
+      { componentPin: "TB6612 PWMA (Left Speed)", targetPin: "Arduino D5 (PWM)", wireColor: "White", type: "PWM", notes: "Speed of the left motor" },
+      { componentPin: "TB6612 AIN1", targetPin: "Arduino D7", wireColor: "Blue", type: "Digital", notes: "Left motor direction" },
+      { componentPin: "TB6612 AIN2", targetPin: "Arduino D8", wireColor: "Purple", type: "Digital", notes: "Left motor direction" },
+      { componentPin: "TB6612 PWMB (Right Speed)", targetPin: "Arduino D6 (PWM)", wireColor: "Gray", type: "PWM", notes: "Speed of the right motor" },
+      { componentPin: "TB6612 BIN1", targetPin: "Arduino D9", wireColor: "Orange", type: "Digital", notes: "Right motor direction" },
+      { componentPin: "TB6612 BIN2", targetPin: "Arduino D10", wireColor: "Brown", type: "Digital", notes: "Right motor direction" },
+      { componentPin: "TB6612 STBY", targetPin: "Arduino D4", wireColor: "Yellow", type: "Digital", notes: "HIGH to enable the driver" },
+      { componentPin: "MPU6050 SDA", targetPin: "Arduino A4", wireColor: "Green", type: "Digital", notes: "I²C data" },
+      { componentPin: "MPU6050 SCL", targetPin: "Arduino A5", wireColor: "Yellow", type: "Digital", notes: "I²C clock" },
+      { componentPin: "MPU6050 VCC", targetPin: "Arduino 5V", wireColor: "Red", type: "Power", notes: "The GY-521 board has its own 3.3 V regulator" },
+      { componentPin: "Left Encoder A", targetPin: "Arduino D2 (INT0)", wireColor: "Yellow", type: "Digital", notes: "Interrupt pin: counts left wheel pulses" },
+      { componentPin: "Left Encoder B", targetPin: "Arduino D11", wireColor: "Green", type: "Digital", notes: "Gives the left wheel's direction" },
+      { componentPin: "Right Encoder A", targetPin: "Arduino D3 (INT1)", wireColor: "Yellow", type: "Digital", notes: "Interrupt pin: counts right wheel pulses" },
+      { componentPin: "Right Encoder B", targetPin: "Arduino A0", wireColor: "Green", type: "Digital", notes: "Gives the right wheel's direction" },
+      { componentPin: "HC-05 TX", targetPin: "Arduino A2", wireColor: "Yellow", type: "Digital", notes: "SoftwareSerial RX: steering commands from the phone" },
+      { componentPin: "HC-05 RX", targetPin: "Arduino A3", wireColor: "Blue", type: "Digital", notes: "Through a 1 kΩ/2 kΩ divider (the HC-05 RX is 3.3 V)" },
+      { componentPin: "TB6612 VCC (logic)", targetPin: "Arduino 5V", wireColor: "Red", type: "Power", notes: "Logic supply for the driver chip" },
+      { componentPin: "TB6612 VM", targetPin: "Battery + (via toggle switch)", wireColor: "Red", type: "Power", notes: "Switched 11.1 V for the motors" },
+      { componentPin: "Li-Po Battery + (via switch)", targetPin: "Arduino VIN", wireColor: "Red", type: "Power", notes: "11.1 V into the Uno's regulator" },
+      { componentPin: "System Ground", targetPin: "Arduino GND + Driver GND + Buck GND + Battery (-)", wireColor: "Black", type: "Ground", notes: "One common ground for every board" },
+    ],
+    arduinoCode: `// =================================================================
+// BalanceBot Pro — Arduino Uno
+// Self-balancing with an MPU6050 (complementary filter + PID),
+// Hall encoders to hold position, HC-05 Bluetooth steering.
+// Libraries: Wire, SoftwareSerial (both built in)
+// =================================================================
+#include <Wire.h>
+#include <SoftwareSerial.h>
+
+// ---------- TB6612FNG ----------
+const int PWMA = 5, AIN1 = 7, AIN2 = 8;      // left motor
+const int PWMB = 6, BIN1 = 9, BIN2 = 10;     // right motor
+const int STBY = 4;
+
+// ---------- Encoders (A channels on the interrupt pins) ----------
+const int ENC_LA = 2, ENC_LB = 11, ENC_RA = 3, ENC_RB = A0;
+volatile long ticksL = 0, ticksR = 0;
+
+// ---------- Bluetooth ----------
+SoftwareSerial bt(A2, A3);                   // RX, TX
+
+// ---------- Tuning ----------
+float BALANCE_ANGLE = 0.0;                   // degrees when perfectly upright
+float Kp = 28.0, Ki = 0.6, Kd = 1.2;         // tilt PID
+float Kpos = 0.02;                            // how strongly it holds position
+const float ALPHA = 0.98;                     // complementary filter weight
+
+const int MPU = 0x68;
+float angle = 0, integral = 0, lastError = 0;
+float drive = 0, turn = 0;                    // from the phone
+unsigned long lastUs;
+
+void setup() {
+  Serial.begin(115200);
+  bt.begin(9600);
+  Wire.begin();
+  Wire.beginTransmission(MPU); Wire.write(0x6B); Wire.write(0); Wire.endTransmission(); // wake up
+
+  int outs[] = {PWMA, AIN1, AIN2, PWMB, BIN1, BIN2, STBY};
+  for (int p : outs) pinMode(p, OUTPUT);
+  pinMode(ENC_LB, INPUT_PULLUP); pinMode(ENC_RB, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(ENC_LA), countL, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC_RA), countR, RISING);
+  digitalWrite(STBY, HIGH);
+
+  angle = readAccelAngle();
+  lastUs = micros();
+}
+
+void loop() {
+  readBluetooth();
+
+  // run the balance loop every 5 ms
+  if (micros() - lastUs < 5000) return;
+  float dt = (micros() - lastUs) / 1e6;
+  lastUs = micros();
+
+  // complementary filter: trust the gyro short-term, the accelerometer long-term
+  angle = ALPHA * (angle + readGyroRate() * dt) + (1 - ALPHA) * readAccelAngle();
+
+  // fallen over: stop the motors until it is stood up again
+  if (abs(angle - BALANCE_ANGLE) > 45) { setMotors(0, 0); integral = 0; return; }
+
+  // hold position: lean slightly against any drift the encoders see
+  long pos = (ticksL + ticksR) / 2;
+  float target = BALANCE_ANGLE + Kpos * pos - drive;
+
+  float error = target - angle;
+  integral = constrain(integral + error * dt, -50, 50);
+  float out = Kp * error + Ki * integral + Kd * (error - lastError) / dt;
+  lastError = error;
+
+  setMotors(out + turn, out - turn);
+  Serial.println(angle);
+}
+
+// ---------- Sensors ----------
+int16_t read16(byte reg) {
+  Wire.beginTransmission(MPU); Wire.write(reg); Wire.endTransmission(false);
+  Wire.requestFrom(MPU, 2);
+  return (Wire.read() << 8) | Wire.read();
+}
+
+float readAccelAngle() {
+  // pitch from gravity: forward/back (Y) against down (Z)
+  return atan2((float)read16(0x3D), (float)read16(0x3F)) * 180.0 / PI;
+}
+
+float readGyroRate() {
+  return read16(0x43) / 131.0;                // degrees per second around X
+}
+
+void countL() { ticksL += digitalRead(ENC_LB) ? 1 : -1; }
+void countR() { ticksR += digitalRead(ENC_RB) ? -1 : 1; }
+
+// ---------- Motors ----------
+void setMotors(float left, float right) {
+  setOne(PWMA, AIN1, AIN2, left);
+  setOne(PWMB, BIN1, BIN2, right);
+}
+
+void setOne(int pwm, int in1, int in2, float v) {
+  int s = constrain(abs(v), 0, 255);
+  digitalWrite(in1, v >= 0);
+  digitalWrite(in2, v < 0);
+  analogWrite(pwm, s);
+}
+
+// ---------- Phone steering: F, B, L, R, S ----------
+void readBluetooth() {
+  if (!bt.available()) return;
+  char c = bt.read();
+  if (c == 'F') drive = 2.0;
+  else if (c == 'B') drive = -2.0;
+  else if (c == 'L') turn = -40;
+  else if (c == 'R') turn = 40;
+  else if (c == 'S') { drive = 0; turn = 0; }
+}`,
+    faqs: [
+      { q: "The robot falls over straight away. Where do I start?", a: "First check BALANCE_ANGLE: hold the robot perfectly upright and read the angle in the Serial Monitor, then put that number in the code. Then check the motors push the right way: when you tilt it forward, both wheels must spin forward to catch it. If not, swap that motor's power wires." },
+      { q: "It shakes back and forth quickly.", a: "Kp is too high or Kd too low. Lower Kp by about 10% or raise Kd a little until the shaking stops." },
+      { q: "It balances but slowly rolls away.", a: "Raise Ki a little, and check the encoders: the A channels must be on D2 and D3 (the interrupt pins) and both encoders need 5 V and GND." },
+      { q: "Why is the battery on the bottom deck?", a: "Putting the heaviest part low and centred keeps the robot's centre of mass close to the axle, so a small correction is enough to catch it." },
+      { q: "How do I view the camera?", a: "The ESP32-CAM runs its own streaming sketch (the CameraWebServer example). Once it joins your Wi-Fi, open its address in a browser. It only needs 5 V and GND from the buck converter, with no wires to the Uno." },
+    ],
   },
   {
     slug: "vision-sorter",
     title: "Vision Sorter Station",
     badge: "CAMERA SORTER",
     description: "A desktop conveyor belt machine with a camera that sorts small items by color and shape.",
-    howItWorks: "Items move along a small belt under a camera. When the computer spots a blue or red object, a mechanical arm pushes it into the correct bin.",
+    shortDescription: "A T-slot conveyor station where a Raspberry Pi camera spots each item's colour and a servo pusher sweeps it down the right chute.",
+    howItWorks: "Items ride the belt into the vision arch. An infrared sensor sees each one arrive, the LED bars light it evenly, and the Raspberry Pi camera takes a picture. OpenCV decides whether it's red, green or blue; red and green items are swept into their chutes by servo pushers further down the belt, and everything else rides off the end. The touchscreen on the arm shows the counts.",
     category: "Robotic Arms",
     level: "Advanced",
     timeEstimate: "9 Hours",
-    partsCount: 24,
-    microcontroller: "Raspberry Pi Computer with Camera",
-    sensors: ["Color Sensor", "USB High-Resolution Camera"],
-    motorDriver: "Conveyor Stepper Motor Driver",
-    image: "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=800&q=80"
+    partsCount: 18,
+    microcontroller: "Raspberry Pi 4 Model B (the station's controller)",
+    sensors: ["Raspberry Pi Camera Module 3 (sees each item's colour)", "E18-D80NK Infrared Item Sensor"],
+    motorDriver: "L298N Motor Driver (conveyor) + PCA9685 Servo Driver (pushers)",
+    image: "https://images.unsplash.com/photo-1563770660941-20978e870e26?auto=format&fit=crop&w=800&q=80",
+    bom: [
+      { id: "vs-pi-01", name: "Raspberry Pi 4 Model B (4GB)", whatIsIt: "A credit-card-size Linux computer.", whyUsed: "It runs the camera and OpenCV colour detection, drives the conveyor and pushers, and shows the counts on the touchscreen: it is the station's 'PLC'.", qty: 1, spec: "Quad-core 1.8 GHz, 4 GB RAM, 40-pin GPIO (3.3 V logic), CSI camera and DSI display ports, 5 V 3 A supply.", category: "Electronics", priceEst: "₹5,200", inStock: true, storesAvailable: 4, alternative: { name: "Raspberry Pi 5", useCase: "You want faster image processing.", whyItWorks: "Same GPIO layout; needs the Pi 5 camera and display cables." } },
+      { id: "vs-cam-01", name: "Raspberry Pi Camera Module 3", whatIsIt: "A 12 MP autofocus camera on a ribbon cable.", whyUsed: "It looks straight down from the vision arch and photographs every item that passes.", qty: 1, spec: "Sony IMX708, 12 MP, autofocus, CSI ribbon.", category: "Electronics", priceEst: "₹2,600", inStock: true, storesAvailable: 3, alternative: { name: "USB webcam", useCase: "You already have one.", whyItWorks: "OpenCV can read it as camera 0; image quality and mounting vary." } },
+      { id: "vs-hmi-01", name: "Raspberry Pi 7\" Touch Display", whatIsIt: "The official 7-inch capacitive touchscreen.", whyUsed: "It's the station's HMI panel: live camera view, colour counts and start/stop buttons.", qty: 1, spec: "800 × 480, 10-point touch, DSI ribbon, 5 V from the GPIO header.", category: "Electronics", priceEst: "₹6,500", inStock: true, storesAvailable: 3, alternative: { name: "5\" HDMI touch display", useCase: "You want a cheaper panel.", whyItWorks: "Works the same through HDMI and USB touch." } },
+      { id: "vs-pca-01", name: "PCA9685 16-Channel Servo Driver", whatIsIt: "A small board that makes steady servo pulses over I²C.", whyUsed: "The Pi's own pulses jitter; the PCA9685 holds the pusher servos rock-steady.", qty: 1, spec: "PCA9685, I²C address 0x40, 16 channels, separate V+ servo supply.", category: "Electronics", priceEst: "₹250", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "vs-srv-01", name: "MG90S Metal-Gear Servos", whatIsIt: "Small, fast servos with metal gears.", whyUsed: "Each one swings a pusher paddle across the belt to sweep an item into its chute.", qty: 2, spec: "MG90S, 2.2 kg·cm, 0.1 s/60°, 5 V.", category: "Movement", priceEst: "₹220", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "vs-mot-01", name: "12V DC Gear Motor (100 RPM) for the Conveyor", whatIsIt: "A geared DC motor with a 6 mm shaft.", whyUsed: "It turns the conveyor's drive roller at a steady, slow belt speed.", qty: 1, spec: "12 V, 100 RPM, 6 mm D-shaft, with mounting bracket and coupler.", category: "Movement", priceEst: "₹450", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "vs-drv-01", name: "L298N Motor Driver", whatIsIt: "A red H-bridge board with a heatsink.", whyUsed: "It switches 12 V to the conveyor motor and lets the Pi set its speed.", qty: 1, spec: "2 A per channel, 5–35 V, ENA speed input.", category: "Electronics", priceEst: "₹160", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "vs-ir-01", name: "E18-D80NK Infrared Item Sensor", whatIsIt: "An adjustable-range infrared proximity sensor in a metal barrel.", whyUsed: "It sees each item arrive under the camera, so the Pi knows exactly when to take the picture.", qty: 1, spec: "3–80 cm adjustable, NPN output, 5 V.", category: "Electronics", priceEst: "₹350", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "vs-led-01", name: "12V LED Inspection Light Bars", whatIsIt: "Short aluminium-backed LED strips.", whyUsed: "Even, bright light stops shadows and room lighting from fooling the colour detection.", qty: 2, spec: "12 V, 6000 K white, 20 cm, about 3 W each.", category: "Electronics", priceEst: "₹180", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "vs-mos-01", name: "IRLZ44N Logic-Level MOSFET Switch Module", whatIsIt: "A small switch board the Pi can turn on with 3.3 V.", whyUsed: "It switches the 12 V LED bars on only while an item is being inspected.", qty: 1, spec: "IRLZ44N, fully on at 3.3 V gate, screw terminals.", category: "Electronics", priceEst: "₹90", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "vs-belt-01", name: "Mini Conveyor Belt Kit (Belt, Rollers, Bed, Side Guards)", whatIsIt: "A PVC belt with a drive roller, an idler roller, a support bed and side guards.", whyUsed: "It carries the items smoothly and straight through the vision arch and past the pushers.", qty: 1, spec: "600 × 80 mm PVC belt, 30 mm rollers with bearings, aluminium bed and guards.", category: "Movement", priceEst: "₹1,800", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "vs-frm-01", name: "2020 Aluminium T-Slot Frame Kit", whatIsIt: "Aluminium extrusions, corner brackets, T-nuts and levelling feet.", whyUsed: "It builds the table frame, the vision arch and the HMI arm, all square and adjustable.", qty: 1, spec: "2020 profile, cut lengths, 20 corner brackets, M5 T-nuts, 4 levelling feet.", category: "Structure", priceEst: "₹2,400", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "vs-chu-01", name: "Sorting Chutes & Collection Bins", whatIsIt: "Two printed chutes and two stackable bins.", whyUsed: "They catch the pushed items and guide them into the red and green bins.", qty: 1, spec: "2 PETG chutes, 2 × 1 L bins (red, green).", category: "Structure", priceEst: "₹350", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "vs-cab-01", name: "Control Cabinet with Clear Door, DIN Rail & Terminal Blocks", whatIsIt: "An ABS enclosure with a transparent door, a DIN rail and screw terminal blocks.", whyUsed: "It keeps the Pi and drivers together, tidy and safe, with one place where every wire lands.", qty: 1, spec: "250 × 300 × 150 mm, clear polycarbonate door, 35 mm DIN rail, 10 terminal blocks.", category: "Structure", priceEst: "₹1,200", inStock: true, storesAvailable: 2, alternative: null },
+      { id: "vs-psu-01", name: "12V 5A Power Adapter with Panel Jack", whatIsIt: "A plug-in 12 V power brick and a panel-mount barrel jack.", whyUsed: "It powers the whole station without any mains wiring inside the cabinet.", qty: 1, spec: "12 V 5 A, 5.5 × 2.1 mm barrel plug, panel jack with screw terminals.", category: "Power", priceEst: "₹650", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "vs-buck-01", name: "12V to 5V 5A Buck Converter", whatIsIt: "A step-down regulator.", whyUsed: "It makes the 5 V for the Pi, the touchscreen and the servos.", qty: 1, spec: "XL4015 or similar, 12 V in, set to 5.1 V out, 5 A.", category: "Power", priceEst: "₹250", inStock: true, storesAvailable: 4, alternative: null },
+      { id: "vs-est-01", name: "Emergency Stop Button (Latching, NC)", whatIsIt: "A big red push-to-stop, twist-to-release button.", whyUsed: "One slap cuts the 12 V to the motor, LEDs and buck converter: the whole station stops.", qty: 1, spec: "22 mm, latching, normally-closed contact, 10 A.", category: "Power", priceEst: "₹220", inStock: true, storesAvailable: 3, alternative: null },
+      { id: "vs-wir-01", name: "Wires, Jumpers & Ferrules Kit", whatIsIt: "DuPont jumpers, 20 AWG wire and crimp ferrules.", whyUsed: "Jumpers for the Pi's signals; ferruled wire for every screw terminal.", qty: 1, spec: "40 jumpers, 5 m of 20 AWG in four colours, 200 ferrules.", category: "Structure", priceEst: "₹250", inStock: true, storesAvailable: 4, alternative: null },
+    ],
+    steps: [
+      { stepNumber: 1, stage: "Step 1: Frame", title: "Build the Aluminium T-Slot Frame", time: "45 mins", description: "Assemble the table frame from the 2020 extrusions and corner brackets.", whatToDo: "Build the rectangular top, four legs and the lower stretchers, then fit the levelling feet.", howToDo: "Slide T-nuts into the slots before closing each joint, then fix every joint with a corner bracket. Measure both diagonals of the top: they must be equal.", whatYouSee: "A stiff, square aluminium table standing on four feet.", checkpoints: ["Both diagonals of the top match within 1 mm", "The frame doesn't rock on a flat floor"], tip: "Put spare T-nuts into every slot you might use later: you can't add them once both ends are closed." },
+      { stepNumber: 2, stage: "Step 2: Conveyor", title: "Mount the Conveyor Rollers, Bed and Belt", time: "40 mins", description: "Fit the rollers at each end, the support bed between them and the belt over the top.", whatToDo: "Bolt the drive roller at the left end and the idler at the right, fit the bed, loop the belt and tension it.", howToDo: "Use the slotted idler mounts to tension the belt until it doesn't sag, then adjust until it runs centred. Fit the side guards along both edges.", whatYouSee: "A flat belt running along the top of the frame between two side guards.", checkpoints: ["The belt runs centred without drifting to one side", "The belt doesn't slip on the drive roller"], tip: "Too tight wears the bearings; just tight enough not to slip is right." },
+      { stepNumber: 3, stage: "Step 3: Drive", title: "Mount the Conveyor Motor", time: "20 mins", description: "Fix the gear motor to the frame and couple it to the drive roller.", whatToDo: "Mount the motor bracket on the frame below the drive roller and join the shafts with the coupler.", howToDo: "Line the motor shaft up with the roller shaft before tightening the coupler's grub screws.", whatYouSee: "The motor sitting beside the left end of the belt, coupled to the drive roller.", checkpoints: ["Turning the roller by hand turns the motor smoothly", "The coupler doesn't wobble"], tip: "A misaligned coupler makes the belt pulse: line the shafts up carefully." },
+      { stepNumber: 4, stage: "Step 4: Vision Arch", title: "Build the Vision Arch, Camera and LED Bars", time: "35 mins", description: "Stand the arch over the belt and fit the camera and lights.", whatToDo: "Bolt the two arch posts to the frame and the cross-beam on top; mount the camera in the centre of the beam looking straight down, and the two LED bars either side.", howToDo: "Set the camera about 20 cm above the belt. Angle the LED bars inward so the light is even under the camera.", whatYouSee: "An arch over the belt with the camera pointing down between two light bars.", checkpoints: ["The camera looks straight down at the centre of the belt", "No bright reflections or dark shadows under the camera"], tip: "Even light matters more than an expensive camera for colour sorting." },
+      { stepNumber: 5, stage: "Step 5: Item Sensor", title: "Mount the Infrared Item Sensor", time: "15 mins", description: "Fix the E18-D80NK on the side guard at the arch.", whatToDo: "Mount the sensor on the side guard, just before the camera, pointing across the belt.", howToDo: "Adjust its range screw until it sees an item on the belt but not the far guard.", whatYouSee: "A small metal sensor on the guard, its red LED lighting when an item passes.", checkpoints: ["The LED lights for every test item", "It doesn't trigger on the empty belt"], tip: "Set the range with the smallest, darkest item you plan to sort." },
+      { stepNumber: 6, stage: "Step 6: Pushers & Chutes", title: "Fit the Pusher Servos, Chutes and Bins", time: "30 mins", description: "Mount the two servo pushers on the far side and the chutes on the near side.", whatToDo: "Mount servo A (red) and servo B (green) on the far guard, each with a paddle; fit a chute opposite each, and set the bins under the chutes.", howToDo: "Centre each servo before fitting its paddle, so the paddle rests parallel to the belt and swings across it.", whatYouSee: "Two paddles resting along the far guard, two chutes on the near side leading to a red and a green bin.", checkpoints: ["Each paddle sweeps fully across the belt", "Items slide down each chute into the right bin"], tip: "Line each chute up exactly opposite its paddle." },
+      { stepNumber: 7, stage: "Step 7: Cabinet", title: "Mount the Control Cabinet and DIN Rail", time: "25 mins", description: "Fix the cabinet beside the frame and fit the DIN rail, terminal blocks, power jack and E-stop.", whatToDo: "Bolt the cabinet to the frame's right end, fit the DIN rail and terminal blocks inside, the panel jack on the side and the E-stop on the front.", howToDo: "Mark the terminal blocks: 12 V, 0 V and 5 V. Fit the E-stop where you can hit it without reaching over the belt.", whatYouSee: "A grey cabinet with a clear door, a DIN rail inside and a red E-stop on the front.", checkpoints: ["The door opens fully", "The E-stop can be reached instantly"], tip: "Label every terminal now: it makes wiring and fault-finding far easier." },
+      { stepNumber: 8, stage: "Step 8: Electronics", title: "Mount the Pi, Drivers and Buck Converter", time: "25 mins", description: "Fit the Raspberry Pi, PCA9685, L298N, MOSFET module and buck converter inside the cabinet.", whatToDo: "Mount each board on standoffs on the cabinet's back panel.", howToDo: "Before connecting anything to it, power the buck converter and set its output to 5.1 V with a multimeter.", whatYouSee: "The green Pi, the red driver and the small boards in neat rows on the back panel.", checkpoints: ["The buck converter reads 5.1 V", "The Pi's USB and Ethernet ports can be reached"], tip: "Set the buck first: too much voltage destroys the Pi instantly." },
+      { stepNumber: 9, stage: "Step 9: HMI", title: "Fit the HMI Arm and Touch Display", time: "20 mins", description: "Mount the display on its arm above the cabinet.", whatToDo: "Bolt the arm upright on the cabinet, mount the 7\" display on it and route its ribbon into the cabinet.", howToDo: "Run the DSI ribbon inside the arm or along it, without folding it sharply.", whatYouSee: "The touchscreen at eye level above the cabinet, tilted toward you.", checkpoints: ["The ribbon has no sharp folds", "The screen faces the operator"], tip: "The DSI ribbon is fragile: support it along its whole length." },
+      { stepNumber: 10, stage: "Step 10: Motor & Lights", title: "Wire the Conveyor Motor and LED Bars", time: "20 mins", description: "Connect the motor to the L298N and the LED bars to the MOSFET module.", whatToDo: "Motor to OUT1/OUT2; both LED bars' + to the MOSFET module's V+ and − to its V−.", howToDo: "Use ferruled wire in every screw terminal. Run the cables along the frame's top rail into the cabinet.", whatYouSee: "Cables running neatly along the frame into the cabinet.", checkpoints: ["No bare copper outside a terminal", "Cables clipped clear of the belt"], tip: "If the belt later runs backwards, swap the motor's two wires." },
+      { stepNumber: 11, stage: "Step 11: Signals", title: "Wire the Pi's Signals, Camera and Display", time: "35 mins", description: "Connect every signal from the pin table.", whatToDo: "L298N ENA/IN1/IN2, PCA9685 SDA/SCL, the item sensor, the MOSFET signal, both servos to the PCA9685, the camera ribbon and the display ribbon.", howToDo: "ENA → GPIO18, IN1 → GPIO23, IN2 → GPIO24; PCA9685 SDA → GPIO2, SCL → GPIO3, VCC → 3.3V; item sensor OUT → GPIO17 through a 10 kΩ/20 kΩ divider; MOSFET SIG → GPIO27; servo A → channel 0, servo B → channel 1.", whatYouSee: "Jumpers from the Pi's header to each board, and two ribbons to the camera and screen.", checkpoints: ["The item sensor's output goes through the divider (the Pi is 3.3 V)", "Ribbons are fully seated with their contacts the right way round"], tip: "Never put 5 V on a Pi GPIO pin: it damages the Pi permanently." },
+      { stepNumber: 12, stage: "Step 12: Power", title: "Wire the Power, E-Stop and Common Ground", time: "25 mins", description: "Run the 12 V from the jack through the E-stop to the driver, LEDs and buck converter, and the 5 V to the Pi and servos.", whatToDo: "Jack + → E-stop → 12 V terminals → L298N 12V, MOSFET VIN, buck IN+; buck 5 V → Pi 5V and PCA9685 V+; join every ground.", howToDo: "Use the terminal blocks as the 12 V, 5 V and 0 V buses. Test the E-stop with a multimeter before plugging in.", whatYouSee: "Red, black and orange wires from the jack through the E-stop to the terminal blocks.", checkpoints: ["Pressing the E-stop cuts the 12 V bus", "One common ground joins every board"], tip: "The adapter must be unplugged while you wire." },
+      { stepNumber: 13, stage: "Step 13: Software & Test", title: "Install the Software, Calibrate Colours and Test", time: "60 mins", description: "Install the libraries, run the sorter and tune the colour ranges.", whatToDo: "Install picamera2, OpenCV, gpiozero and adafruit-circuitpython-servokit, then run the sorter script.", howToDo: "Run with a few red, green and blue items. Adjust the HSV ranges in COLOURS until every item is named correctly, and PUSH_DELAY until each paddle hits its item.", whatYouSee: "Items ride through the arch, the lights flash, and red and green items are swept into their bins.", checkpoints: ["Every test item is named correctly", "Each pusher hits its item squarely"], tip: "Calibrate under the station's own LED light, not daylight." },
+    ],
+    pinout: [
+      { componentPin: "L298N ENA (Belt Speed)", targetPin: "Pi GPIO18 (PWM0)", wireColor: "White", type: "PWM", notes: "Conveyor speed. Remove the ENA jumper cap." },
+      { componentPin: "L298N IN1", targetPin: "Pi GPIO23", wireColor: "Blue", type: "Digital", notes: "Belt forward" },
+      { componentPin: "L298N IN2", targetPin: "Pi GPIO24", wireColor: "Purple", type: "Digital", notes: "Belt reverse" },
+      { componentPin: "PCA9685 SDA", targetPin: "Pi GPIO2 (SDA)", wireColor: "Green", type: "Digital", notes: "I²C data to the servo driver" },
+      { componentPin: "PCA9685 SCL", targetPin: "Pi GPIO3 (SCL)", wireColor: "Yellow", type: "Digital", notes: "I²C clock" },
+      { componentPin: "PCA9685 VCC (logic)", targetPin: "Pi 3.3V", wireColor: "Red", type: "Power", notes: "Logic supply; the servos get their own 5 V on V+" },
+      { componentPin: "E18-D80NK Sensor OUT", targetPin: "Pi GPIO17", wireColor: "Yellow", type: "Digital", notes: "Through a 10 kΩ/20 kΩ divider: the sensor is 5 V, the Pi is 3.3 V" },
+      { componentPin: "E18-D80NK Sensor VCC", targetPin: "Pi 5V", wireColor: "Red", type: "Power", notes: "The sensor needs 5 V" },
+      { componentPin: "LED MOSFET SIG", targetPin: "Pi GPIO27", wireColor: "Orange", type: "Digital", notes: "Turns the inspection lights on" },
+      { componentPin: "Camera Module 3 ribbon", targetPin: "Pi CSI camera port", wireColor: "Gray", type: "Digital", notes: "Ribbon cable, contacts toward the HDMI ports" },
+      { componentPin: "Touch Display ribbon", targetPin: "Pi DSI display port", wireColor: "Gray", type: "Digital", notes: "Ribbon cable; the display also takes 5V and GND from the header" },
+      { componentPin: "5V Buck OUT+", targetPin: "Pi 5V", wireColor: "Red", type: "Power", notes: "5.1 V into the Pi's 5V pins (pin 2)" },
+      { componentPin: "L298N 12V In", targetPin: "12V Power Supply + (via E-stop)", wireColor: "Red", type: "Power", notes: "Switched 12 V for the motor" },
+      { componentPin: "System Ground", targetPin: "Pi GND + Driver GND + Buck GND + Supply (-)", wireColor: "Black", type: "Ground", notes: "One common ground for every board" },
+    ],
+    arduinoCode: `# =================================================================
+# Vision Sorter Station — Raspberry Pi 4 (Python 3)
+# Item sensor -> lights on -> photo -> colour -> timed servo push.
+# Install:  sudo apt install python3-picamera2 python3-opencv
+#           pip install gpiozero adafruit-circuitpython-servokit
+# =================================================================
+import time
+import threading
+import cv2
+import numpy as np
+from picamera2 import Picamera2
+from gpiozero import PWMOutputDevice, DigitalOutputDevice, DigitalInputDevice
+from adafruit_servokit import ServoKit
+
+# ---------- Pins (BCM numbering) ----------
+belt_speed = PWMOutputDevice(18, frequency=1000)   # L298N ENA
+belt_fwd = DigitalOutputDevice(23)                 # L298N IN1
+belt_rev = DigitalOutputDevice(24)                 # L298N IN2
+lights = DigitalOutputDevice(27)                   # MOSFET SIG
+item_sensor = DigitalInputDevice(17, pull_up=True) # E18-D80NK (low = item)
+
+# ---------- Pushers on the PCA9685 ----------
+kit = ServoKit(channels=16)
+PUSHERS = {"red": 0, "green": 1}                   # PCA9685 channels
+REST, PUSH = 0, 75                                  # paddle angles
+PUSH_DELAY = {"red": 1.4, "green": 2.6}            # seconds from camera to paddle
+
+# ---------- Colour ranges (HSV): tune these in step 13 ----------
+COLOURS = {
+    "red":   [((0, 120, 80), (10, 255, 255)), ((170, 120, 80), (180, 255, 255))],
+    "green": [((40, 80, 60), (85, 255, 255))],
+    "blue":  [((95, 100, 60), (130, 255, 255))],
+}
+MIN_AREA = 1500                                     # pixels
+
+counts = {"red": 0, "green": 0, "blue": 0, "other": 0}
+
+def run_belt(speed=0.55):
+    belt_fwd.on(); belt_rev.off()
+    belt_speed.value = speed
+
+def stop_belt():
+    belt_speed.value = 0
+    belt_fwd.off(); belt_rev.off()
+
+def classify(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+    best, best_area = "other", MIN_AREA
+    for name, ranges in COLOURS.items():
+        mask = np.zeros(hsv.shape[:2], np.uint8)
+        for lo, hi in ranges:
+            mask |= cv2.inRange(hsv, np.array(lo), np.array(hi))
+        area = cv2.countNonZero(mask)
+        if area > best_area:
+            best, best_area = name, area
+    return best
+
+def push_later(colour):
+    def go():
+        time.sleep(PUSH_DELAY[colour])
+        kit.servo[PUSHERS[colour]].angle = PUSH
+        time.sleep(0.35)
+        kit.servo[PUSHERS[colour]].angle = REST
+    threading.Thread(target=go, daemon=True).start()
+
+def main():
+    cam = Picamera2()
+    cam.configure(cam.create_still_configuration(main={"size": (640, 480)}))
+    cam.start()
+    for ch in PUSHERS.values():
+        kit.servo[ch].angle = REST
+    run_belt()
+    print("Vision Sorter running - Ctrl+C to stop")
+    try:
+        while True:
+            item_sensor.wait_for_inactive()        # sensor goes low when an item arrives
+            lights.on()
+            time.sleep(0.08)                      # let the light settle
+            colour = classify(cam.capture_array())
+            lights.off()
+            counts[colour] += 1
+            print(colour, counts)
+            if colour in PUSHERS:
+                push_later(colour)
+            item_sensor.wait_for_active()         # wait for the item to pass
+    except KeyboardInterrupt:
+        pass
+    finally:
+        stop_belt()
+        lights.off()
+        cam.stop()
+
+if __name__ == "__main__":
+    main()`,
+    codeNote: "This station runs Python on the Raspberry Pi, not an Arduino sketch.",
+    faqs: [
+      { q: "Why a Raspberry Pi instead of an Arduino?", a: "Colour detection needs a camera and image processing (OpenCV), which an Arduino can't run. The Pi does the vision, the control and the touchscreen, acting as the station's PLC." },
+      { q: "Items are sorted into the wrong bin.", a: "Tune the HSV ranges in COLOURS under the station's own LED light: print the hue of a test item and widen or narrow that colour's range. Even lighting matters more than the camera." },
+      { q: "The pusher misses the item.", a: "Adjust PUSH_DELAY for that colour: increase it if the paddle swings too early, decrease it if too late. Keep the belt speed fixed once you've tuned it." },
+      { q: "The Pi reboots when a pusher moves.", a: "The servos are drawing from the Pi's supply. Make sure the PCA9685's V+ terminal gets 5 V straight from the buck converter, not from the Pi's header." },
+      { q: "Why is there a divider on the item sensor?", a: "The E18-D80NK runs on 5 V and its output can reach 5 V, but the Pi's GPIO pins are 3.3 V only. The 10 kΩ/20 kΩ divider brings the signal down to a safe 3.3 V." },
+    ],
   }
 ];

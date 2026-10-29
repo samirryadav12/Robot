@@ -73,12 +73,20 @@ export function RobotViewer3D({ slug }: RobotViewer3DProps) {
     camera.position.set(initX, initY, initZ);
 
     // 3. Renderer Setup
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: false,
-      powerPreference: "high-performance",
-    });
+    // without WebGL the viewer reports it instead of throwing, so the rest of the page still renders
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance",
+      });
+    } catch {
+      setLoadError("The 3D view needs WebGL, which this browser has turned off.");
+      setLoading(false);
+      return;
+    }
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -108,6 +116,9 @@ export function RobotViewer3D({ slug }: RobotViewer3DProps) {
     controls.maxDistance = 8.0;
     controls.target.set(tgtX, tgtY, tgtZ);
     controls.maxPolarAngle = Math.PI / 2 + 0.05; // Prevent camera dipping below floor
+    // the viewer sits inside a scroll-driven page: the wheel scrolls the page until the visitor clicks into
+    // the viewer, then zooms until the pointer leaves it
+    controls.enableZoom = false;
 
     resetCameraRef.current = () => {
       camera.position.set(initX, initY, initZ);
@@ -213,6 +224,7 @@ export function RobotViewer3D({ slug }: RobotViewer3DProps) {
 
     const handlePointerDown = () => {
       canvas.style.cursor = "grabbing";
+      controls.enableZoom = true;
     };
 
     const handlePointerUp = (e: MouseEvent) => {
@@ -236,6 +248,7 @@ export function RobotViewer3D({ slug }: RobotViewer3DProps) {
     };
 
     const handleMouseLeave = () => {
+      controls.enableZoom = false;
       clearHighlight();
       setHoveredComponent(null);
       setTooltipPos(null);
@@ -363,7 +376,7 @@ export function RobotViewer3D({ slug }: RobotViewer3DProps) {
         {!loading && !loadError && (
           <div className="absolute bottom-4 left-4 z-10 pointer-events-none bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-[#E8E2D9] shadow-subtle flex items-center gap-2 text-xs font-semibold text-slate-600">
             <MousePointer className="w-3.5 h-3.5 text-brand-500" />
-            <span>Drag to rotate • Scroll to zoom • Click part to inspect</span>
+            <span>Drag to rotate • Click, then scroll to zoom • Click part to inspect</span>
           </div>
         )}
 

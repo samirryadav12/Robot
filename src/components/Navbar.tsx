@@ -27,10 +27,10 @@ export function Navbar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF7F2]/90 backdrop-blur-md border-b border-[#E8E2D9]">
+    <header className="sticky top-0 z-50 bg-[#05060a]/75 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        {/* Brand */}
-        <RoboLogo />
+        {/* Brand (left out on the 3D journey pages; the empty span keeps the links and buttons where they are) */}
+        {pathname?.endsWith("/journey") ? <span aria-hidden /> : <RoboLogo />}
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1 lg:gap-2">
@@ -70,7 +70,7 @@ export function Navbar() {
           </Link>
 
           <Link
-            href="/projects/line-follower"
+            href="/projects/line-follower/journey"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all duration-200 group"
           >
             <span>Start Building</span>
@@ -119,7 +119,7 @@ export function Navbar() {
           })}
           <div className="pt-3">
             <Link
-              href="/projects/line-follower"
+              href="/projects/line-follower/journey"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold shadow-md"
             >

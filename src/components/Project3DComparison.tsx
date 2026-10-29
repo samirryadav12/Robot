@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { RobotViewer3D } from "@/components/RobotViewer3D";
 
 interface Project3DComparisonProps {
@@ -8,13 +9,15 @@ interface Project3DComparisonProps {
   title: string;
   realImage?: string;
   description?: string;
+  viewer?: ReactNode;   // a project's own 3D view in place of the generic RobotViewer3D
 }
 
 export function Project3DComparison({
   slug,
   title,
   realImage,
-  description = "Explore the robot from every angle. Drag to rotate the model and use the controls to zoom in or out."
+  description = "Explore the robot from every angle. Drag to rotate the model and use the controls to zoom in or out.",
+  viewer,
 }: Project3DComparisonProps) {
   // Determine standard path for real robot photograph
   const resolvedRealImage =
@@ -46,7 +49,7 @@ export function Project3DComparison({
 
       {/* 1. 3D MODEL VIEWER (Primary) */}
       <div className="w-full">
-        <RobotViewer3D slug={slug} />
+        {viewer ?? <RobotViewer3D slug={slug} />}
       </div>
 
       {/* 2. REAL PROJECT PHOTOGRAPH COMPARISON (Directly Below 3D Viewer) */}

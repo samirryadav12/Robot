@@ -21,9 +21,13 @@ interface ProjectBomSectionProps {
   items: BomItem[];
   projectTitle: string;
   projectSlug?: string;
+  /* optional link to a 3D model of the project (Line Follower workshop): "Show in 3D", a highlighted entry, thumbnails */
+  onLocate?: (id: string) => void;
+  highlightId?: string;
+  thumbFor?: (id: string) => string | undefined;
 }
 
-export function ProjectBomSection({ items = [], projectTitle, projectSlug }: ProjectBomSectionProps) {
+export function ProjectBomSection({ items = [], projectTitle, projectSlug, onLocate, highlightId, thumbFor }: ProjectBomSectionProps) {
   const availabilityUrl = projectSlug ? `/availability?project=${projectSlug}` : "/availability";
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
@@ -214,13 +218,14 @@ export function ProjectBomSection({ items = [], projectTitle, projectSlug }: Pro
           {filteredItems.map((item) => {
             const isAcquired = !!checkedItems[item.id];
             return (
-              <div 
+              <div
                 key={item.id}
-                className={`bg-white rounded-3xl border transition-all duration-200 p-6 shadow-subtle ${
-                  isAcquired 
-                    ? "border-emerald-300 bg-emerald-50/20" 
+                id={`bom-item-${item.id}`}
+                className={`bg-white rounded-3xl border transition-all duration-200 p-6 shadow-subtle scroll-mt-24 ${
+                  isAcquired
+                    ? "border-emerald-300 bg-emerald-50/20"
                     : "border-[#E8E2D9] hover:border-brand-300"
-                }`}
+                } ${highlightId === item.id ? "ring-4 ring-brand-200 border-brand-400" : ""}`}
               >
                 {/* Card Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[#E8E2D9]">
@@ -259,7 +264,22 @@ export function ProjectBomSection({ items = [], projectTitle, projectSlug }: Pro
                       <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">
                         {item.name}
                       </h4>
+                      {onLocate && (
+                        <button
+                          type="button"
+                          onClick={() => onLocate(item.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FBF8F3] border border-[#E8E2D9] text-xs font-bold text-slate-700 hover:border-brand-300 hover:text-brand-700"
+                        >
+                          <Layers className="w-3.5 h-3.5" /> Show in 3D
+                        </button>
+                      )}
                     </div>
+                    {thumbFor?.(item.id) && (
+                      <figure className="hidden sm:block ml-auto shrink-0">
+                        <img src={thumbFor(item.id)} alt={`3D render of the ${item.name}`} className="w-24 h-[72px] rounded-2xl border border-[#E8E2D9] bg-[#F7F3EC] object-cover" />
+                        <figcaption className="text-[9px] font-semibold text-slate-400 text-center mt-0.5">3D render</figcaption>
+                      </figure>
+                    )}
                   </div>
 
                   {/* Price & Stock info */}

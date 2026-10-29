@@ -63,3 +63,214 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #C85A32;
 }
+
+/* Project journey: chapter titles follow the 3D world's light (dark ink in the warm studio, light ink in the
+   dark technical rooms); content sheets stay light so every chapter reads the same way */
+.journey-ink {
+  color: #181A1C;
+  text-shadow: 0 0 24px rgba(246, 241, 233, 0.85);
+  transition: color 0.45s ease, text-shadow 0.45s ease;
+}
+
+.journey[data-ink="light"] .journey-ink {
+  color: #F7F3EC;
+  text-shadow: 0 0 24px rgba(22, 27, 33, 0.85);
+}
+
+.journey[data-stage="off"] .journey-ink {
+  color: #181A1C;
+}
+
+.journey[data-stage="off"] .journey-canvas {
+  display: none;
+}
+
+.journey-sheet {
+  background: rgba(250, 247, 242, 0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-ink {
+    transition: none;
+  }
+}
+
+/* Line Follower workshop: detail panels and step changes rise in gently */
+@keyframes lf-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.lf-rise {
+  animation: lf-rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-rise {
+    animation: none;
+  }
+}
+
+/* =====================================================================
+   DEEP SPACE — the whole site sits on a dark, starlit background like the homepage. Text that sits directly on
+   the background turns light; light cards and panels keep their dark text exactly as before.
+   ===================================================================== */
+:root {
+  --ink-900: 241 243 247; --ink-800: 226 230 236; --ink-700: 203 209 218; --ink-600: 170 178 190;
+}
+/* light surfaces: dark text inside them, as designed */
+[class~="bg-[#E8E2D9]"],
+[class~="bg-[#EAF5EC]"],
+[class~="bg-[#F1ECE4]"],
+[class~="bg-[#F2ECFA]"],
+[class~="bg-[#F3ECE3]"],
+[class~="bg-[#F7F3EC]"],
+[class~="bg-[#FAF7F2]"],
+[class~="bg-[#FAF7F2]/40"],
+[class~="bg-[#FAF7F2]/80"],
+[class~="bg-[#FAF7F2]/90"],
+[class~="bg-[#FAF7F2]/92"],
+[class~="bg-[#FBF8F3]"],
+[class~="bg-[#FBF8F3]/95"],
+[class~="bg-[#FDF1E8]"],
+[class~="bg-[#FDFBF8]"],
+[class~="bg-amber-100"],
+[class~="bg-amber-50"],
+[class~="bg-amber-50/40"],
+[class~="bg-amber-50/50"],
+[class~="bg-amber-50/70"],
+[class~="bg-blue-100"],
+[class~="bg-blue-50/80"],
+[class~="bg-brand-100"],
+[class~="bg-brand-100/70"],
+[class~="bg-brand-50"],
+[class~="bg-brand-50/50"],
+[class~="bg-brand-50/60"],
+[class~="bg-brand-50/70"],
+[class~="bg-emerald-100"],
+[class~="bg-emerald-50"],
+[class~="bg-emerald-50/40"],
+[class~="bg-emerald-50/70"],
+[class~="bg-purple-100"],
+[class~="bg-rose-100"],
+[class~="bg-rose-50"],
+[class~="bg-rose-50/70"],
+[class~="bg-sky-50"],
+[class~="bg-sky-50/70"],
+[class~="bg-slate-100"],
+[class~="bg-slate-50"],
+[class~="bg-stone-100"],
+[class~="bg-white"],
+[class~="bg-white/70"],
+[class~="bg-white/80"],
+[class~="bg-white/85"],
+[class~="bg-white/90"],
+[class~="bg-white/95"],
+.journey-sheet {
+  --ink-900: 15 23 42; --ink-800: 30 41 59; --ink-700: 51 65 85; --ink-600: 71 85 105;
+}
+.text-slate-900 { color: rgb(var(--ink-900) / var(--tw-text-opacity, 1)); }
+.text-slate-800 { color: rgb(var(--ink-800) / var(--tw-text-opacity, 1)); }
+.text-slate-700 { color: rgb(var(--ink-700) / var(--tw-text-opacity, 1)); }
+.text-slate-600 { color: rgb(var(--ink-600) / var(--tw-text-opacity, 1)); }
+
+body[class] {
+  --ink-900: 241 243 247; --ink-800: 226 230 236; --ink-700: 203 209 218; --ink-600: 170 178 190;
+  background-color: #05060a;
+  color: #eef0f4;
+  background-image:
+    radial-gradient(1200px 700px at 78% 12%, rgba(120, 70, 190, 0.10), transparent 60%),
+    radial-gradient(900px 600px at 12% 88%, rgba(255, 112, 72, 0.07), transparent 60%),
+    radial-gradient(1400px 900px at 50% 50%, rgba(30, 40, 80, 0.18), transparent 70%);
+  background-attachment: fixed;
+}
+/* two layers of stars, fixed behind every page */
+body[class]::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.9), transparent 60%),
+    radial-gradient(1px 1px at 140px 90px, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 260px 160px, rgba(255, 236, 220, 0.85), transparent 60%),
+    radial-gradient(1px 1px at 330px 40px, rgba(200, 215, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 90px 210px, rgba(255, 255, 255, 0.6), transparent 60%),
+    radial-gradient(1.2px 1.2px at 390px 250px, rgba(255, 255, 255, 0.75), transparent 60%);
+  background-size: 420px 300px;
+}
+body[class]::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.6;
+  background-image:
+    radial-gradient(1px 1px at 60px 120px, rgba(255, 255, 255, 0.8), transparent 60%),
+    radial-gradient(1.6px 1.6px at 510px 60px, rgba(255, 210, 180, 0.9), transparent 60%),
+    radial-gradient(1px 1px at 300px 380px, rgba(190, 210, 255, 0.8), transparent 60%),
+    radial-gradient(1px 1px at 720px 260px, rgba(255, 255, 255, 0.7), transparent 60%);
+  background-size: 820px 520px;
+}
+/* chapter titles stay light when the 3D stage is off too */
+.journey[data-stage="off"] .journey-ink { color: #F3EEE8; }
+::-webkit-scrollbar-track { background: #05060a; }
+::-webkit-scrollbar-thumb { background: #2a2f38; }
+
+/* an opened journey panel: the live 3D galaxy stays visible behind it through a dark tint, and its content sits on
+   smoked glass with light text (light cards inside keep their dark text, as everywhere else on the dark site) */
+.journey-open {
+  background:
+    radial-gradient(1100px 700px at 75% 10%, rgba(120, 70, 190, 0.10), transparent 60%),
+    rgba(5, 6, 10, 0.5);
+}
+.journey-open-bar {
+  background: rgba(5, 6, 10, 0.55);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.journey-sheet.journey-sheet-space {
+  --ink-900: 241 243 247; --ink-800: 226 230 236; --ink-700: 203 209 218; --ink-600: 170 178 190;
+  color: #eef0f4;
+  background: rgba(10, 12, 18, 0.62);
+  border-color: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+
+/* =====================================================================
+   BUBBLY BUTTONS — every clickable pill (links and buttons) is the same dark liquid-glass bubble as the homepage's
+   "View All 8 Projects": a smoky dark glass body, a glossy sheen across the top, a thin light rim, white text and a
+   soft shadow, on dark pages and light cards alike. Tiny dot buttons (progress rails) are left as they are.
+   Presentation only.
+   ===================================================================== */
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]) {
+  isolation: isolate;
+  color: #f6f7fb;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(255, 255, 255, 0.02) 100%),
+    rgba(30, 31, 36, 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -10px 18px -8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 14px 30px -14px rgba(0, 0, 0, 0.7);
+  transition: box-shadow 0.35s cubic-bezier(.2, .7, .1, 1), border-color 0.3s, background 0.3s, transform 0.35s cubic-bezier(.2, .7, .1, 1);
+}
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]):not([class~="absolute"]):not([class~="fixed"]):not([class~="sticky"]) { position: relative; }
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]) *:not([class*="bg-"]) { color: inherit; } /* (a badge with its own background keeps its own text colour) */
+/* the glossy sheen across the top half, behind the label */
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"])::before {
+  content: ""; position: absolute; z-index: -1; left: 6%; right: 6%; top: 2px; height: 46%;
+  border-radius: 999px 999px 40% 40% / 999px 999px 100% 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]):hover {
+  border-color: rgba(255, 255, 255, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.07) 48%, rgba(255, 255, 255, 0.03) 100%),
+    rgba(40, 42, 48, 0.82);
+}
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]):active {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -4px 12px -4px rgba(0, 0, 0, 0.55), 0 8px 18px -12px rgba(0, 0, 0, 0.7);
+}
+:where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]):disabled { opacity: 0.45; }
+@media (prefers-reduced-motion: reduce) { :where(a, button):is([class*="rounded-full"], [class~="rounded-xl"][class*="bg-brand"]):not([class~="w-6"], [class~="w-7"], [class~="w-8"], [class~="w-9"]) { transition: none; } }

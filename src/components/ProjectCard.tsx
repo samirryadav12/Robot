@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Project } from "@/data/projects";
-import { Clock, Cpu, Wrench, ArrowRight } from "lucide-react";
+import { Clock, Cpu, Wrench, ArrowRight, Box } from "lucide-react";
 
 interface ProjectCardProps {
   project: Project;
@@ -70,17 +70,27 @@ export function ProjectCard({ project }: ProjectCardProps) {
       </div>
 
       {/* Action Footer */}
-      <div className="mt-5 pt-3 flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+      <div className="mt-5 pt-3 space-y-3">
+        <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
           {project.category}
         </span>
-        <Link
-          href={linkHref}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FDF1E8] text-brand-600 hover:bg-brand-500 hover:text-white font-bold text-xs transition-colors duration-200"
-        >
-          <span>View Build Guide</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="grid grid-cols-2 gap-2">
+          {/* the guided 3D journey through this project's panels */}
+          <Link
+            href={`${linkHref}/journey`}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-brand-500 text-white hover:bg-brand-600 font-bold text-xs whitespace-nowrap transition-colors duration-200"
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span>3D Journey</span>
+          </Link>
+          <Link
+            href={linkHref}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#FDF1E8] text-brand-600 hover:bg-brand-500 hover:text-white font-bold text-xs whitespace-nowrap transition-colors duration-200"
+          >
+            <span>Build Guide</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </div>
     </div>
   );
